@@ -2,6 +2,7 @@
   <div class="wrapper">
 
     <div style="float: right;margin-right: 22px">
+      <el-button type="warning" size="large" @click="requestLatestData"> Refresh</el-button>
       <el-button type="warning" size="large" @click="openSettingsTestDialog"> Settings Test</el-button>
       <el-button type="warning" size="large" @click="openSettingsDialog" :icon="Setting"></el-button>
       <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload"></el-button>
@@ -104,7 +105,8 @@
         :show-dialog="isShowSettingsTestDialog"
         v-if="isShowSettingsTestDialog"
         @close="closeSettingsTestDialog"
-        @confirm="closeSettingsTestDialog"
+        @confirm="confirmSettingsTestDialog"
+        ref="settingWrapperDialog"
     />
 
   </div>
@@ -114,10 +116,12 @@ import SettingsWrapperDialog from "./SettingsWrapperDialog.vue";
 import {testGithubApi, upload} from "../api/GithubApi.js"
 import {useSettingsStore} from "../stores/settingsData.js";
 
-import {computed, onMounted, ref} from "vue";
+import {computed, getCurrentInstance, onMounted, ref} from "vue";
 import {ElMessage} from "element-plus";
 import {UploadFilled, Upload, Setting,CopyDocument} from '@element-plus/icons-vue'
 // import  { ComponentSize, FormInstance, FormRules } from '@element-plus'
+const { proxy } =  getCurrentInstance()
+
 
 
 const mSettingsStore = useSettingsStore()
@@ -131,7 +135,9 @@ let uploadDialogLoading = ref(false)
 // let pre = ref("https://cdn.jsdelivr.net/gh/FuShaoLei/img5@master/")
 
 let pre = computed(()=>{
-  return "https://cdn.jsdelivr.net/gh/" + mSettingsStore.githubSettings.name + "/"+mSettingsStore.githubSettings.repo+"@"+mSettingsStore.githubSettings.branch+"/"
+  const preStr = `https://cdn.jsdelivr.net/gh/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}@${mSettingsStore.githubSettings.branch}/`
+  console.log("preStr = " + preStr)
+  return preStr
 })
 
 let imgPageDataTotal = ref(0)
@@ -145,7 +151,16 @@ let isShowSettingsDialog = ref(false)
 
 /** 复制到剪切板 */
 let copy2Clip = str => {
-  navigator.clipboard.writeText(`![](${str})`)
+
+  let copyUrl = ''
+  if (mSettingsStore.otherSettings.copyType === 'origin') {
+    copyUrl = str
+  } else { // markdown
+    copyUrl = `![](${str})`
+  }
+
+  navigator.clipboard.writeText(copyUrl)
+
   ElMessage({
     message: 'Copy Success!',
     type: 'success',
@@ -235,11 +250,20 @@ let requestLatestData = () => {
 
   if (useSettingsStore().githubSettings.token.length > 0) {
     imgListLoading.value = true
+    allImgData.value = []
+    showImgData.value = []
+
     testGithubApi().then(res => {
-      console.log(res)
+      console.log(res.data)
+
+
       allImgData.value = res.data.filter(item => {
         return imgTailName.some(ext => item.name.toLowerCase().endsWith(ext)) && item.type === "file"
       }).sort((a, b) => b.name.localeCompare(a.name))
+
+      console.log("allImgData.value")
+      console.log(allImgData.value)
+
     }).finally(() => {
       handelShowImgData()
       imgListLoading.value = false
@@ -284,6 +308,8 @@ const settingsFormRules = ref({
   branch: [{required: true, message: 'Please input Repo Name',trigger: 'blur'}]
 })
 
+const settingWrapperDialog = ref(null)
+
 let updateSettingsData = function () {
 
   settingsFormRef.value.validate((valid, fields) => {
@@ -312,7 +338,19 @@ const isShowSettingsTestDialog = ref(false)
 
 const openSettingsTestDialog = () => {
   isShowSettingsTestDialog.value = true
+
+  proxy.$nextTick(() => {settingWrapperDialog.value.init()})
 }
+
+const closeSettingsTestDialog = () => isShowSettingsTestDialog.value = false
+
+const confirmSettingsTestDialog = (data) => {
+
+  requestLatestData()
+  closeSettingsTestDialog()
+}
+
+
 
 </script>
 

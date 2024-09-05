@@ -5,6 +5,11 @@ import {useSettingsStore} from "../stores/settingsData.js";
 export function testGithubApi() {
     const mSettingsStore = useSettingsStore();
 
+    console.log(`name = ${mSettingsStore.githubSettings.name}`)
+    console.log(`repo = ${mSettingsStore.githubSettings.repo}`)
+
+    console.log(`request url = /repos/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}/contents/`)
+
     return request({
         url:`/repos/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}/contents/`,
         headers:{
