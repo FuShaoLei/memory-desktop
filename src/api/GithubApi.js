@@ -2,13 +2,8 @@ import request from "../utils/request.js";
 import {useSettingsStore} from "../stores/settingsData.js";
 
 
-export function testGithubApi() {
+export function getContents() {
     const mSettingsStore = useSettingsStore();
-
-    console.log(`name = ${mSettingsStore.githubSettings.name}`)
-    console.log(`repo = ${mSettingsStore.githubSettings.repo}`)
-
-    console.log(`request url = /repos/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}/contents/`)
 
     return request({
         url:`/repos/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}/contents/`,

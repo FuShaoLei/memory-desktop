@@ -1,12 +1,12 @@
 <template>
   <div class="wrapper">
 
-    <div style="float: right;margin-right: 22px">
-      <el-button type="warning" size="large" @click="requestLatestData"> Refresh</el-button>
-      <el-button type="warning" size="large" @click="openSettingsTestDialog"> Settings Test</el-button>
-      <el-button type="warning" size="large" @click="openSettingsDialog" :icon="Setting"></el-button>
+    <div class="top_btn_container">
+      <el-button type="warning" size="large" @click="requestLatestData" :icon="Refresh"></el-button>
+      <el-button type="warning" size="large" @click="openSettingsTestDialog" :icon="Setting"></el-button>
       <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload"></el-button>
     </div>
+
     <div class="img-show-wrapper" v-loading="imgListLoading">
       <div class="img-show-item" v-for="item in showImgData" :key="item.path">
         <img :src="pre + item.path" :alt="pre + item.path"/>
@@ -66,41 +66,6 @@
 
     </el-dialog>
 
-
-    <el-dialog :close-on-click-modal="false"
-               title="Settings"
-               width="70%"
-               v-model="isShowSettingsDialog">
-      <div>
-        <el-form label-width="170px" :rules="settingsFormRules" :model="settingsForm" ref="settingsFormRef">
-          <el-form-item label="Token" prop="token">
-            <el-input v-model="settingsForm.token" clearable style="width: 400px;margin-right: 10px"></el-input>
-          </el-form-item>
-
-          <el-form-item label="User" prop="name">
-            <el-input v-model="settingsForm.name" clearable style="width: 400px"></el-input>
-          </el-form-item>
-          <el-form-item label="Repo" prop="repo">
-            <el-input v-model="settingsForm.repo" clearable style="width: 400px"></el-input>
-          </el-form-item>
-          <el-form-item label="Branch" prop="repo">
-            <el-input v-model="settingsForm.branch" clearable style="width: 400px"></el-input>
-          </el-form-item>
-        </el-form>
-
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="isShowSettingsDialog = false">Cancel</el-button>
-          <el-button type="primary" @click="updateSettingsData">
-            Confirm
-          </el-button>
-        </div>
-      </template>
-
-    </el-dialog>
-
     <SettingsWrapperDialog
         :show-dialog="isShowSettingsTestDialog"
         v-if="isShowSettingsTestDialog"
@@ -113,13 +78,13 @@
 </template>
 <script setup="Memory">
 import SettingsWrapperDialog from "./SettingsWrapperDialog.vue";
-import {testGithubApi, upload} from "../api/GithubApi.js"
+import {getContents, upload} from "../api/GithubApi.js"
 import {useSettingsStore} from "../stores/settingsData.js";
 
 import {computed, getCurrentInstance, onMounted, ref} from "vue";
 import {ElMessage} from "element-plus";
-import {UploadFilled, Upload, Setting,CopyDocument} from '@element-plus/icons-vue'
-// import  { ComponentSize, FormInstance, FormRules } from '@element-plus'
+import {CopyDocument, Refresh, Setting, Upload, UploadFilled} from '@element-plus/icons-vue'
+
 const { proxy } =  getCurrentInstance()
 
 
@@ -132,12 +97,8 @@ let showImgData = ref([])
 let imgListLoading = ref(false)
 let uploadDialogLoading = ref(false)
 
-// let pre = ref("https://cdn.jsdelivr.net/gh/FuShaoLei/img5@master/")
-
 let pre = computed(()=>{
-  const preStr = `https://cdn.jsdelivr.net/gh/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}@${mSettingsStore.githubSettings.branch}/`
-  console.log("preStr = " + preStr)
-  return preStr
+  return `https://cdn.jsdelivr.net/gh/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}@${mSettingsStore.githubSettings.branch}/`
 })
 
 let imgPageDataTotal = ref(0)
@@ -169,10 +130,7 @@ let copy2Clip = str => {
 
 
 let stopUpload = (rawFile) => {
-  // console.log("stopUpload")
-  // console.log(rawFile)
   realUpload(rawFile)
-
   return false
 }
 
@@ -253,16 +211,11 @@ let requestLatestData = () => {
     allImgData.value = []
     showImgData.value = []
 
-    testGithubApi().then(res => {
-      console.log(res.data)
-
+    getContents().then(res => {
 
       allImgData.value = res.data.filter(item => {
         return imgTailName.some(ext => item.name.toLowerCase().endsWith(ext)) && item.type === "file"
       }).sort((a, b) => b.name.localeCompare(a.name))
-
-      console.log("allImgData.value")
-      console.log(allImgData.value)
 
     }).finally(() => {
       handelShowImgData()
@@ -284,56 +237,8 @@ onMounted(() => {
 })
 
 
-// 处理settings逻辑
-const settingsFormRef = ref()
-let settingsForm = ref(
-    {
-      token: "",
-      name: "",
-      repo: "",
-      branch:""
-    }
-)
-
-let openSettingsDialog = () => {
-
-  settingsForm.value = {...useSettingsStore().githubSettings}
-  isShowSettingsDialog.value = true
-}
-
-const settingsFormRules = ref({
-  token: [{required: true, message: 'Please input Token',trigger: 'blur'}],
-  name: [{required: true, message: 'Please input User Name',trigger: 'blur'}],
-  repo: [{required: true, message: 'Please input Repo Name',trigger: 'blur'}],
-  branch: [{required: true, message: 'Please input Repo Name',trigger: 'blur'}]
-})
-
 const settingWrapperDialog = ref(null)
 
-let updateSettingsData = function () {
-
-  settingsFormRef.value.validate((valid, fields) => {
-    if (valid) {
-      isShowSettingsDialog.value = false
-      ElMessage({
-        message: 'Update Settings Success !',
-        type: 'success'
-      })
-      useSettingsStore().setGithubSettings(settingsForm.value)
-      requestLatestData()
-
-    } else {
-      ElMessage({
-        message: 'illegal !',
-        type: 'warning'
-      })
-    }
-  })
-
-  // useSettingsStore().setGithubSettings(settingsForm.value)
-
-
-}
 const isShowSettingsTestDialog = ref(false)
 
 const openSettingsTestDialog = () => {

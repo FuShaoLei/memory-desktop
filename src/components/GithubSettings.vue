@@ -38,7 +38,6 @@ const settingsFormRules = ref({
 })
 
 function init() {
-  console.log("settings init")
   settingsForm.value = {...useSettingsStore().githubSettings}
 }
 
