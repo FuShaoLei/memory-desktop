@@ -201,8 +201,8 @@ let updateSettingsData = function () {
   <div class="wrapper">
 
     <div style="float: right;margin-right: 22px">
-      <el-button type="warning" size="large" @click="openSettingsDialog" :icon="Setting">Settings.</el-button>
-      <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload">Upload Image.</el-button>
+      <el-button type="warning" size="large" @click="openSettingsDialog" :icon="Setting"></el-button>
+      <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload"></el-button>
     </div>
     <div class="img-show-wrapper" v-loading="imgListLoading">
       <div class="img-show-item" v-for="item in showImgData" :key="item.path">
@@ -235,7 +235,7 @@ let updateSettingsData = function () {
 
     <el-dialog
         :close-on-click-modal="false"
-        title="Upload Image."
+        title="Upload Image"
         width="70%"
         v-model="isShowUploadImageDialog">
 
@@ -265,7 +265,7 @@ let updateSettingsData = function () {
 
 
     <el-dialog :close-on-click-modal="false"
-               title="Settings."
+               title="Settings"
                width="70%"
                v-model="isShowSettingsDialog">
       <div>
@@ -274,13 +274,13 @@ let updateSettingsData = function () {
             <el-input v-model="settingsForm.token" clearable style="width: 400px;margin-right: 10px"></el-input>
           </el-form-item>
 
-          <el-form-item label="User Name" prop="name">
+          <el-form-item label="User" prop="name">
             <el-input v-model="settingsForm.name" clearable style="width: 400px"></el-input>
           </el-form-item>
-          <el-form-item label="Repo Name" prop="repo">
+          <el-form-item label="Repo" prop="repo">
             <el-input v-model="settingsForm.repo" clearable style="width: 400px"></el-input>
           </el-form-item>
-          <el-form-item label="Branch Name" prop="repo">
+          <el-form-item label="Branch" prop="repo">
             <el-input v-model="settingsForm.branch" clearable style="width: 400px"></el-input>
           </el-form-item>
         </el-form>
