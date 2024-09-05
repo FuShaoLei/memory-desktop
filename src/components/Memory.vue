@@ -1,4 +1,116 @@
+<template>
+  <div class="wrapper">
+
+    <div style="float: right;margin-right: 22px">
+      <el-button type="warning" size="large" @click="openSettingsTestDialog"> Settings Test</el-button>
+      <el-button type="warning" size="large" @click="openSettingsDialog" :icon="Setting"></el-button>
+      <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload"></el-button>
+    </div>
+    <div class="img-show-wrapper" v-loading="imgListLoading">
+      <div class="img-show-item" v-for="item in showImgData" :key="item.path">
+        <img :src="pre + item.path" :alt="pre + item.path"/>
+        <div class="img-show-btn-group">
+          <div>
+            <el-tooltip
+                class="box-item"
+                content="Copy Link"
+                effect="light"
+                placement="top-start"
+            >
+              <el-button size="small" :icon="CopyDocument" type="primary" @click="copy2Clip(pre + item.path)"></el-button>
+            </el-tooltip>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div style="float: right">
+      <el-pagination
+          background
+          v-show="imgPageDataTotal > 0"
+          style="margin: 20px 0;"
+          :total="imgPageDataTotal"
+          v-model:current-page="imgPageQueryParams.pageNum"
+          v-model:page-size="imgPageQueryParams.pageSize"
+          @current-change="handelShowImgData"/>
+    </div>
+
+    <el-dialog
+        :close-on-click-modal="false"
+        title="Upload Image"
+        width="70%"
+        v-model="isShowUploadImageDialog">
+
+      <el-upload
+          class="upload-demo"
+          drag
+          action="none"
+          multiple
+          :before-upload="stopUpload"
+          v-loading="uploadDialogLoading"
+      >
+        <el-icon class="el-icon--upload">
+          <upload-filled/>
+        </el-icon>
+        <div class="el-upload__text">
+          Drop file here or <em>click to upload</em>
+        </div>
+        <template #tip>
+          <div class="el-upload__tip">
+            jpg/png files with a size less than 500kb
+          </div>
+        </template>
+      </el-upload>
+
+
+    </el-dialog>
+
+
+    <el-dialog :close-on-click-modal="false"
+               title="Settings"
+               width="70%"
+               v-model="isShowSettingsDialog">
+      <div>
+        <el-form label-width="170px" :rules="settingsFormRules" :model="settingsForm" ref="settingsFormRef">
+          <el-form-item label="Token" prop="token">
+            <el-input v-model="settingsForm.token" clearable style="width: 400px;margin-right: 10px"></el-input>
+          </el-form-item>
+
+          <el-form-item label="User" prop="name">
+            <el-input v-model="settingsForm.name" clearable style="width: 400px"></el-input>
+          </el-form-item>
+          <el-form-item label="Repo" prop="repo">
+            <el-input v-model="settingsForm.repo" clearable style="width: 400px"></el-input>
+          </el-form-item>
+          <el-form-item label="Branch" prop="repo">
+            <el-input v-model="settingsForm.branch" clearable style="width: 400px"></el-input>
+          </el-form-item>
+        </el-form>
+
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="isShowSettingsDialog = false">Cancel</el-button>
+          <el-button type="primary" @click="updateSettingsData">
+            Confirm
+          </el-button>
+        </div>
+      </template>
+
+    </el-dialog>
+
+    <SettingsWrapperDialog
+        :show-dialog="isShowSettingsTestDialog"
+        v-if="isShowSettingsTestDialog"
+        @close="closeSettingsTestDialog"
+        @confirm="closeSettingsTestDialog"
+    />
+
+  </div>
+</template>
 <script setup="Memory">
+import SettingsWrapperDialog from "./SettingsWrapperDialog.vue";
 import {testGithubApi, upload} from "../api/GithubApi.js"
 import {useSettingsStore} from "../stores/settingsData.js";
 
@@ -193,113 +305,16 @@ let updateSettingsData = function () {
   })
 
   // useSettingsStore().setGithubSettings(settingsForm.value)
+
+
+}
+const isShowSettingsTestDialog = ref(false)
+
+const openSettingsTestDialog = () => {
+  isShowSettingsTestDialog.value = true
 }
 
 </script>
-
-<template>
-  <div class="wrapper">
-
-    <div style="float: right;margin-right: 22px">
-      <el-button type="warning" size="large" @click="openSettingsDialog" :icon="Setting"></el-button>
-      <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload"></el-button>
-    </div>
-    <div class="img-show-wrapper" v-loading="imgListLoading">
-      <div class="img-show-item" v-for="item in showImgData" :key="item.path">
-        <img :src="pre + item.path" :alt="pre + item.path"/>
-        <div class="img-show-btn-group">
-          <div>
-            <el-tooltip
-                class="box-item"
-                content="Copy Link"
-                effect="light"
-                placement="top-start"
-            >
-              <el-button size="small" :icon="CopyDocument" type="primary" @click="copy2Clip(pre + item.path)"></el-button>
-            </el-tooltip>
-          </div>
-
-        </div>
-      </div>
-    </div>
-    <div style="float: right">
-      <el-pagination
-          background
-          v-show="imgPageDataTotal > 0"
-          style="margin: 20px 0;"
-          :total="imgPageDataTotal"
-          v-model:current-page="imgPageQueryParams.pageNum"
-          v-model:page-size="imgPageQueryParams.pageSize"
-          @current-change="handelShowImgData"/>
-    </div>
-
-    <el-dialog
-        :close-on-click-modal="false"
-        title="Upload Image"
-        width="70%"
-        v-model="isShowUploadImageDialog">
-
-      <el-upload
-          class="upload-demo"
-          drag
-          action="none"
-          multiple
-          :before-upload="stopUpload"
-          v-loading="uploadDialogLoading"
-      >
-        <el-icon class="el-icon--upload">
-          <upload-filled/>
-        </el-icon>
-        <div class="el-upload__text">
-          Drop file here or <em>click to upload</em>
-        </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            jpg/png files with a size less than 500kb
-          </div>
-        </template>
-      </el-upload>
-
-
-    </el-dialog>
-
-
-    <el-dialog :close-on-click-modal="false"
-               title="Settings"
-               width="70%"
-               v-model="isShowSettingsDialog">
-      <div>
-        <el-form label-width="170px" :rules="settingsFormRules" :model="settingsForm" ref="settingsFormRef">
-          <el-form-item label="Token" prop="token">
-            <el-input v-model="settingsForm.token" clearable style="width: 400px;margin-right: 10px"></el-input>
-          </el-form-item>
-
-          <el-form-item label="User" prop="name">
-            <el-input v-model="settingsForm.name" clearable style="width: 400px"></el-input>
-          </el-form-item>
-          <el-form-item label="Repo" prop="repo">
-            <el-input v-model="settingsForm.repo" clearable style="width: 400px"></el-input>
-          </el-form-item>
-          <el-form-item label="Branch" prop="repo">
-            <el-input v-model="settingsForm.branch" clearable style="width: 400px"></el-input>
-          </el-form-item>
-        </el-form>
-
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="isShowSettingsDialog = false">Cancel</el-button>
-          <el-button type="primary" @click="updateSettingsData">
-            Confirm
-          </el-button>
-        </div>
-      </template>
-
-    </el-dialog>
-
-  </div>
-</template>
 
 <style scoped>
 @import "../css/MemoryStyle.css";
