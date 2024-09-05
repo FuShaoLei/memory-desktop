@@ -1,11 +1,92 @@
+<template>
+  <div class="wrapper">
+
+    <div class="top_btn_container">
+      <el-button type="warning" size="large" @click="requestLatestData" :icon="Refresh"></el-button>
+      <el-button type="warning" size="large" @click="openSettingsTestDialog" :icon="Setting"></el-button>
+      <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload"></el-button>
+    </div>
+
+    <div class="img-show-wrapper" v-loading="imgListLoading">
+      <div class="img-show-item" v-for="item in showImgData" :key="item.path">
+        <img :src="pre + item.path" :alt="pre + item.path"/>
+        <div class="img-show-btn-group">
+          <div>
+            <el-tooltip
+                class="box-item"
+                content="Copy Link"
+                effect="light"
+                placement="top-start"
+            >
+              <el-button size="small" :icon="CopyDocument" type="primary" @click="copy2Clip(pre + item.path)"></el-button>
+            </el-tooltip>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div style="float: right">
+      <el-pagination
+          background
+          v-show="imgPageDataTotal > 0"
+          style="margin: 20px 0;"
+          :total="imgPageDataTotal"
+          v-model:current-page="imgPageQueryParams.pageNum"
+          v-model:page-size="imgPageQueryParams.pageSize"
+          @current-change="handelShowImgData"/>
+    </div>
+
+    <el-dialog
+        :close-on-click-modal="false"
+        title="Upload Image"
+        width="70%"
+        v-model="isShowUploadImageDialog">
+
+      <el-upload
+          class="upload-demo"
+          drag
+          action="none"
+          multiple
+          :before-upload="stopUpload"
+          v-loading="uploadDialogLoading"
+      >
+        <el-icon class="el-icon--upload">
+          <upload-filled/>
+        </el-icon>
+        <div class="el-upload__text">
+          Drop file here or <em>click to upload</em>
+        </div>
+        <template #tip>
+          <div class="el-upload__tip">
+            jpg/png files with a size less than 500kb
+          </div>
+        </template>
+      </el-upload>
+
+
+    </el-dialog>
+
+    <SettingsWrapperDialog
+        :show-dialog="isShowSettingsTestDialog"
+        v-if="isShowSettingsTestDialog"
+        @close="closeSettingsTestDialog"
+        @confirm="confirmSettingsTestDialog"
+        ref="settingWrapperDialog"
+    />
+
+  </div>
+</template>
 <script setup="Memory">
-import {testGithubApi, upload} from "../api/GithubApi.js"
+import SettingsWrapperDialog from "./SettingsWrapperDialog.vue";
+import {getContents, upload} from "../api/GithubApi.js"
 import {useSettingsStore} from "../stores/settingsData.js";
 
-import {computed, onMounted, ref} from "vue";
+import {computed, getCurrentInstance, onMounted, ref} from "vue";
 import {ElMessage} from "element-plus";
-import {UploadFilled, Upload, Setting,CopyDocument} from '@element-plus/icons-vue'
-// import  { ComponentSize, FormInstance, FormRules } from '@element-plus'
+import {CopyDocument, Refresh, Setting, Upload, UploadFilled} from '@element-plus/icons-vue'
+
+const { proxy } =  getCurrentInstance()
+
 
 
 const mSettingsStore = useSettingsStore()
@@ -16,10 +97,8 @@ let showImgData = ref([])
 let imgListLoading = ref(false)
 let uploadDialogLoading = ref(false)
 
-// let pre = ref("https://cdn.jsdelivr.net/gh/FuShaoLei/img5@master/")
-
 let pre = computed(()=>{
-  return "https://cdn.jsdelivr.net/gh/" + mSettingsStore.githubSettings.name + "/"+mSettingsStore.githubSettings.repo+"@"+mSettingsStore.githubSettings.branch+"/"
+  return `https://cdn.jsdelivr.net/gh/${mSettingsStore.githubSettings.name}/${mSettingsStore.githubSettings.repo}@${mSettingsStore.githubSettings.branch}/`
 })
 
 let imgPageDataTotal = ref(0)
@@ -33,7 +112,16 @@ let isShowSettingsDialog = ref(false)
 
 /** 复制到剪切板 */
 let copy2Clip = str => {
-  navigator.clipboard.writeText(`![](${str})`)
+
+  let copyUrl = ''
+  if (mSettingsStore.otherSettings.copyType === 'origin') {
+    copyUrl = str
+  } else { // markdown
+    copyUrl = `![](${str})`
+  }
+
+  navigator.clipboard.writeText(copyUrl)
+
   ElMessage({
     message: 'Copy Success!',
     type: 'success',
@@ -42,10 +130,7 @@ let copy2Clip = str => {
 
 
 let stopUpload = (rawFile) => {
-  // console.log("stopUpload")
-  // console.log(rawFile)
   realUpload(rawFile)
-
   return false
 }
 
@@ -123,11 +208,15 @@ let requestLatestData = () => {
 
   if (useSettingsStore().githubSettings.token.length > 0) {
     imgListLoading.value = true
-    testGithubApi().then(res => {
-      console.log(res)
+    allImgData.value = []
+    showImgData.value = []
+
+    getContents().then(res => {
+
       allImgData.value = res.data.filter(item => {
         return imgTailName.some(ext => item.name.toLowerCase().endsWith(ext)) && item.type === "file"
       }).sort((a, b) => b.name.localeCompare(a.name))
+
     }).finally(() => {
       handelShowImgData()
       imgListLoading.value = false
@@ -148,158 +237,27 @@ onMounted(() => {
 })
 
 
-// 处理settings逻辑
-const settingsFormRef = ref()
-let settingsForm = ref(
-    {
-      token: "",
-      name: "",
-      repo: "",
-      branch:""
-    }
-)
+const settingWrapperDialog = ref(null)
 
-let openSettingsDialog = () => {
+const isShowSettingsTestDialog = ref(false)
 
-  settingsForm.value = {...useSettingsStore().githubSettings}
-  isShowSettingsDialog.value = true
+const openSettingsTestDialog = () => {
+  isShowSettingsTestDialog.value = true
+
+  proxy.$nextTick(() => {settingWrapperDialog.value.init()})
 }
 
-const settingsFormRules = ref({
-  token: [{required: true, message: 'Please input Token',trigger: 'blur'}],
-  name: [{required: true, message: 'Please input User Name',trigger: 'blur'}],
-  repo: [{required: true, message: 'Please input Repo Name',trigger: 'blur'}],
-  branch: [{required: true, message: 'Please input Repo Name',trigger: 'blur'}]
-})
+const closeSettingsTestDialog = () => isShowSettingsTestDialog.value = false
 
-let updateSettingsData = function () {
+const confirmSettingsTestDialog = (data) => {
 
-  settingsFormRef.value.validate((valid, fields) => {
-    if (valid) {
-      isShowSettingsDialog.value = false
-      ElMessage({
-        message: 'Update Settings Success !',
-        type: 'success'
-      })
-      useSettingsStore().setGithubSettings(settingsForm.value)
-      requestLatestData()
-
-    } else {
-      ElMessage({
-        message: 'illegal !',
-        type: 'warning'
-      })
-    }
-  })
-
-  // useSettingsStore().setGithubSettings(settingsForm.value)
+  requestLatestData()
+  closeSettingsTestDialog()
 }
+
+
 
 </script>
-
-<template>
-  <div class="wrapper">
-
-    <div style="float: right;margin-right: 22px">
-      <el-button type="warning" size="large" @click="openSettingsDialog" :icon="Setting">Settings.</el-button>
-      <el-button type="primary" size="large" @click="openUploadImageDialog" :icon="Upload">Upload Image.</el-button>
-    </div>
-    <div class="img-show-wrapper" v-loading="imgListLoading">
-      <div class="img-show-item" v-for="item in showImgData" :key="item.path">
-        <img :src="pre + item.path" :alt="pre + item.path"/>
-        <div class="img-show-btn-group">
-          <div>
-            <el-tooltip
-                class="box-item"
-                content="Copy Link"
-                effect="light"
-                placement="top-start"
-            >
-              <el-button size="small" :icon="CopyDocument" type="primary" @click="copy2Clip(pre + item.path)"></el-button>
-            </el-tooltip>
-          </div>
-
-        </div>
-      </div>
-    </div>
-    <div style="float: right">
-      <el-pagination
-          background
-          v-show="imgPageDataTotal > 0"
-          style="margin: 20px 0;"
-          :total="imgPageDataTotal"
-          v-model:current-page="imgPageQueryParams.pageNum"
-          v-model:page-size="imgPageQueryParams.pageSize"
-          @current-change="handelShowImgData"/>
-    </div>
-
-    <el-dialog
-        :close-on-click-modal="false"
-        title="Upload Image."
-        width="70%"
-        v-model="isShowUploadImageDialog">
-
-      <el-upload
-          class="upload-demo"
-          drag
-          action="none"
-          multiple
-          :before-upload="stopUpload"
-          v-loading="uploadDialogLoading"
-      >
-        <el-icon class="el-icon--upload">
-          <upload-filled/>
-        </el-icon>
-        <div class="el-upload__text">
-          Drop file here or <em>click to upload</em>
-        </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            jpg/png files with a size less than 500kb
-          </div>
-        </template>
-      </el-upload>
-
-
-    </el-dialog>
-
-
-    <el-dialog :close-on-click-modal="false"
-               title="Settings."
-               width="70%"
-               v-model="isShowSettingsDialog">
-      <div>
-        <el-form label-width="170px" :rules="settingsFormRules" :model="settingsForm" ref="settingsFormRef">
-          <el-form-item label="Token" prop="token">
-            <el-input v-model="settingsForm.token" clearable style="width: 400px;margin-right: 10px"></el-input>
-          </el-form-item>
-
-          <el-form-item label="User Name" prop="name">
-            <el-input v-model="settingsForm.name" clearable style="width: 400px"></el-input>
-          </el-form-item>
-          <el-form-item label="Repo Name" prop="repo">
-            <el-input v-model="settingsForm.repo" clearable style="width: 400px"></el-input>
-          </el-form-item>
-          <el-form-item label="Branch Name" prop="repo">
-            <el-input v-model="settingsForm.branch" clearable style="width: 400px"></el-input>
-          </el-form-item>
-        </el-form>
-
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="isShowSettingsDialog = false">Cancel</el-button>
-          <el-button type="primary" @click="updateSettingsData">
-            Confirm
-          </el-button>
-        </div>
-      </template>
-
-    </el-dialog>
-
-  </div>
-</template>
 
 <style scoped>
 @import "../css/MemoryStyle.css";

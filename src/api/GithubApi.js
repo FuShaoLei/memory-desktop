@@ -2,7 +2,7 @@ import request from "../utils/request.js";
 import {useSettingsStore} from "../stores/settingsData.js";
 
 
-export function testGithubApi() {
+export function getContents() {
     const mSettingsStore = useSettingsStore();
 
     return request({

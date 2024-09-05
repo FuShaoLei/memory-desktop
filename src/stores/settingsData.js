@@ -9,12 +9,18 @@ export const useSettingsStore = defineStore('settings', {
                 name: "",
                 repo: "",
                 branch: ""
+            },
+            otherSettings: {
+                copyType: "origin" // "origin"
             }
         }
     },
     actions: {
         setGithubSettings(newGithubSettings) {
             this.githubSettings = newGithubSettings
+        },
+        setOtherSettings(newOtherSettings) {
+            this.otherSettings = newOtherSettings
         }
     },
     persist: true
